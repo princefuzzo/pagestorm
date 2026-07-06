@@ -9,6 +9,7 @@ from typing import Any
 from uuid import uuid4
 
 from .models import StoryBundle
+from .vllm_registration import configure_pagestorm_vllm_model
 
 
 @dataclass(frozen=True)
@@ -124,6 +125,7 @@ def create_generation_runtime(
     gpu_memory_utilization: float,
     max_model_len: int | None,
 ) -> StoryVllmRuntime:
+    hf_overrides = configure_pagestorm_vllm_model(bundle.bundle_path)
     async_engine_class, async_engine_args_class = _load_async_engine_runtime_types()
     model_identifier = _resolve_runtime_model_identifier(bundle)
     runtime_kwargs: dict[str, Any] = {
@@ -135,6 +137,8 @@ def create_generation_runtime(
         "dtype": "float16",
         "structured_outputs_config": {"backend": "guidance"},
     }
+    if hf_overrides is not None:
+        runtime_kwargs["hf_overrides"] = hf_overrides
     if bundle.profile.tokenizer_mode is not None:
         runtime_kwargs["tokenizer_mode"] = bundle.profile.tokenizer_mode
     event_loop = asyncio.new_event_loop()

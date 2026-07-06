@@ -66,7 +66,6 @@ PROFILES: dict[str, ModelProfile] = {
     ),
 }
 
-
 def get_profile(profile_name: str) -> ModelProfile:
     try:
         return PROFILES[profile_name]
@@ -76,5 +75,16 @@ def get_profile(profile_name: str) -> ModelProfile:
 
 def get_profile_by_repo_id(repo_id: str) -> ModelProfile:
     matching_profiles = [profile for profile in PROFILES.values() if profile.default_repo_id == repo_id]
-    assert len(matching_profiles) == 1, f"Unsupported Pagestorm repo_id: {repo_id}"
-    return matching_profiles[0]
+    if matching_profiles:
+        assert len(matching_profiles) == 1, f"Multiple Pagestorm profiles matched repo_id: {repo_id}"
+        return matching_profiles[0]
+    normalized_repo_id = repo_id.lower()
+    has_14b_marker = "14b" in normalized_repo_id
+    has_24b_marker = "24b" in normalized_repo_id
+    if has_14b_marker and has_24b_marker:
+        raise ValueError(f"Ambiguous Pagestorm repo_id contains both 14B and 24B markers: {repo_id}")
+    if has_14b_marker:
+        return PROFILES["14b"]
+    if has_24b_marker:
+        return PROFILES["24b"]
+    raise ValueError(f"Unsupported Pagestorm repo_id: {repo_id}")

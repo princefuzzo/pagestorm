@@ -18,6 +18,9 @@ dependencies = [
 [project.scripts]
 pagestorm = "pagestorm.cli:main"
 
+[project.entry-points."vllm.general_plugins"]
+pagestorm = "pagestorm.vllm_registration:register_pagestorm_vllm_plugin"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
