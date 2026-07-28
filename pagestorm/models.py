@@ -19,6 +19,8 @@ class StoryStageProtocol(Protocol):
 
     def stage_structured_outputs(self, role: str) -> dict[str, Any] | None: ...
 
+    def stage_text_matches(self, role: str, text: str) -> bool: ...
+
     def render_stage_prompt(
         self, prompt: str, completed_stages: list[tuple[str, str]] | None, next_stage_role: str
     ) -> str: ...
@@ -39,6 +41,22 @@ class StoryBundle:
     protocol: StoryStageProtocol
     profile: ModelProfile
     source_repo_id: str | None = None
+
+
+@dataclass(frozen=True)
+class ChapterTextCompletionPrefix:
+    serialized_stage_prefix: str
+    stage_text_prefix: str
+    eot_token: str
+    chapter_end_stop_reasons: tuple[int | str | None, ...]
+
+
+@dataclass(frozen=True)
+class FullBookChapterPlanCompletionPrefix:
+    serialized_stage_prefix: str
+    stage_text_prefix: str
+    stop_strings: tuple[str, ...]
+    structured_outputs: dict[str, Any]
 
 
 StageOutputCallback = Callable[["StageOutput"], None]

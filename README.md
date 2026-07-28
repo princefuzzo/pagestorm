@@ -9,9 +9,14 @@
 
 ## Install
 
+Install PageStorm with its standard vLLM runtime to use the generation CLI:
+
 ```bash
-pip install "git+https://github.com/Pageshift-ai/pagestorm.git"
+pip install "pagestorm[runtime] @ git+https://github.com/Pageshift-ai/pagestorm.git"
 ```
+
+Install PageStorm without the `runtime` extra when another service or package
+provides a compatible vLLM runtime.
 
 ## Run
 

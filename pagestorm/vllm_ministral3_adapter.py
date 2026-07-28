@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import cast
 
 import torch
 from torch import nn
 from torch.nn import functional as F
-from transformers import PretrainedConfig
+from transformers import LlamaConfig, PretrainedConfig
 from vllm.config import VllmConfig
 from vllm.model_executor.layers.linear import ColumnParallelLinear, RowParallelLinear
 from vllm.model_executor.layers.quantization import QuantizationConfig
@@ -16,6 +15,8 @@ from .vllm_registration import FIXED_ADAPTER_IFFM, FIXED_ADAPTER_NAME
 
 
 class PagestormResidualAdapter(nn.Module):
+    output_scale: torch.Tensor
+
     def __init__(
         self,
         *,
@@ -39,12 +40,35 @@ class PagestormResidualAdapter(nn.Module):
             quant_config=quant_config,
             prefix=f"{prefix}.out_proj",
         )
+        self.register_buffer("output_scale", torch.ones(()), persistent=False)
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         projected, _ = self.in_proj(hidden_states)
         activated = F.gelu(projected, approximate="none")
         updated, _ = self.out_proj(activated)
-        return updated + hidden_states
+        return updated * self.output_scale + hidden_states
+
+
+@torch.no_grad()
+def set_pagestorm_adapters_enabled(model: nn.Module, enabled: bool) -> int:
+    adapters = [
+        module
+        for module in model.modules()
+        if isinstance(module, PagestormResidualAdapter)
+    ]
+    if not adapters:
+        raise RuntimeError(
+            "The loaded model does not contain PageStorm residual adapters."
+        )
+    for adapter in adapters:
+        adapter.output_scale[...] = 1 if enabled else 0
+    return len(adapters)
+
+
+class PagestormAdapterWorkerExtension:
+    def set_pagestorm_adapters_enabled(self, enabled: bool) -> int:
+        model = self.get_model()  # type: ignore[attr-defined]
+        return set_pagestorm_adapters_enabled(model, enabled)
 
 
 def _validate_model_adapter_config(config: PretrainedConfig) -> None:
@@ -70,7 +94,7 @@ class PagestormMinistral3DecoderLayer(LlamaDecoderLayer):
         self,
         vllm_config: VllmConfig,
         prefix: str = "",
-        config: PretrainedConfig | None = None,
+        config: LlamaConfig | None = None,
         attn_layer_type: type[nn.Module] | None = None,
     ) -> None:
         if attn_layer_type is None:
@@ -138,7 +162,7 @@ def _rewrite_adapter_weights(weights: Iterable[tuple[str, torch.Tensor]]) -> Ite
 
 class PagestormMinistral3ForCausalLM(LlamaForCausalLM):
     def __init__(self, *, vllm_config: VllmConfig, prefix: str = "") -> None:
-        _validate_model_adapter_config(cast(PretrainedConfig, vllm_config.model_config.hf_config))
+        _validate_model_adapter_config(vllm_config.model_config.hf_config)
         super().__init__(vllm_config=vllm_config, prefix=prefix, layer_type=PagestormMinistral3DecoderLayer)
 
     def _init_model(

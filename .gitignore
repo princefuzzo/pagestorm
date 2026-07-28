@@ -2,3 +2,16 @@ __pycache__/
 .pytest_cache/
 .venv/
 *.pyc
+.env
+.env.*
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+checkpoints/
+run_artifacts/

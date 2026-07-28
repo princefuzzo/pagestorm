@@ -7,7 +7,11 @@ from typing import Any, Mapping
 from .artifacts import render_book_text, render_story_stage_artifact
 from .artifacts_14b import PlannedChapterInfo
 from .models import GenerationRun, StageOutput, StageOutputCallback, StageStartCallback, StageTextChunkCallback, StoryBundle
-from .vllm_runtime import StoryVllmRuntime, create_generation_runtime, generate_completion
+from .vllm_runtime import (
+    StoryVllmRuntime,
+    create_generation_runtime as create_generation_runtime,
+    generate_completion,
+)
 
 
 FULL_BOOK_ONLY_STAGE_ROLES = {
