@@ -10,6 +10,51 @@ class PlannedChapterInfo(TypedDict):
     chapter_embedding_space: str
 
 
+BOOK_PLAN_COMPONENT_HEADERS = {
+    "## World Rules": "world_rules",
+    "## Short Story Arcs": "short_story_arcs",
+    "## Character Archetypes": "character_archetypes",
+    "## Writing Style": "writing_style",
+    "## Medium Story Arcs": "medium_story_arcs",
+    "## Long Story Arcs": "long_story_arcs",
+    "## Number of Chapters": "number_of_chapters",
+    "## Chapter Names": "chapter_names",
+    "## Chapters Embedding Space": "chapter_embedding_spaces",
+    "## Chapters Word Count": "chapter_word_counts",
+}
+
+
+def split_book_plan_components(text: str) -> list[tuple[str, str]]:
+    """Split an accepted 14B book plan along its trained loss groups."""
+
+    headers = "|".join(re.escape(header) for header in BOOK_PLAN_COMPONENT_HEADERS)
+    matches = list(re.finditer(rf"(?m)^(?:{headers})$", text))
+    components = []
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        component_text = text[match.start() : end].strip()
+        heading = component_text.splitlines()[0]
+        components.append((BOOK_PLAN_COMPONENT_HEADERS[heading], component_text))
+    return components
+
+
+def split_first_chapter_plan_components(text: str) -> list[tuple[str, str]]:
+    """Split an accepted first-chapter plan along its two trained loss groups."""
+
+    marker = "### Scene Breakdown"
+    marker_index = text.find(marker)
+    if marker_index < 0:
+        return [("first_chapter_plan_header", text.strip())] if text.strip() else []
+    header = text[:marker_index].strip()
+    scene_breakdown = text[marker_index:].strip()
+    components = []
+    if header:
+        components.append(("first_chapter_plan_header", header))
+    if scene_breakdown:
+        components.append(("first_chapter_scene_breakdown", scene_breakdown))
+    return components
+
+
 BULLET_LINE_RE = r"- [^\n]{1,300}"
 NARRATIVE_FOCUS_NAME_RE = r"\S(?:[^\n;]{0,63}\S)?"
 NARRATIVE_FOCUSES_RE = NARRATIVE_FOCUS_NAME_RE + r"(?:; " + NARRATIVE_FOCUS_NAME_RE + r"){0,6}"

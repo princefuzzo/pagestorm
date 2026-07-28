@@ -1,0 +1,22 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: .venv/bin/python -m ruff check
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false
+
+      - id: mypy
+        name: mypy
+        entry: .venv/bin/python -m mypy
+        language: system
+        pass_filenames: false
+
+      - id: ai-slop-lint
+        name: AI slop lint
+        entry: .venv/bin/python scripts/ai_slop_lint.py
+        language: system
+        types: [python]
+        pass_filenames: true
